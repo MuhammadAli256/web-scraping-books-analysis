@@ -7,54 +7,79 @@ Original file is located at
     https://colab.research.google.com/drive/1ZKpnl2pV4m5M09QMYtROcpg7EhJTjnrb
 """
 
-!pip install requests beautifulsoup4 pandas
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
+import time
 
+# =========================
+# SETUP
+# =========================
 base_url = "https://books.toscrape.com/"
 data = []
 
 page = 1
+max_rows = 250  # change to 200 or 300 if you want
 
-while len(data) < 250:  # 👈 limit rows here
+# =========================
+# SCRAPING LOOP
+# =========================
+while len(data) < max_rows:
     url = f"https://books.toscrape.com/catalogue/page-{page}.html"
     response = requests.get(url)
     soup = BeautifulSoup(response.text, "html.parser")
 
     books = soup.find_all("article", class_="product_pod")
 
+    # stop if no data found
     if not books:
-        break  # stop if no more pages
+        break
 
     for book in books:
-        if len(data) >= 250:
-            break  # stop exactly at 250
+        if len(data) >= max_rows:
+            break
 
-        # Title
+        # -----------------
+        # TITLE
+        # -----------------
         title = book.h3.a["title"]
 
-        # Price
+        # -----------------
+        # PRICE (clean numeric)
+        # -----------------
         price_text = book.find("p", class_="price_color").text
-        price = float(price_text.replace("£", "").replace("Â", "")) # Added .replace("Â", "") to fix encoding issue
+        price = float(price_text.replace("£", "").replace("Â", "").strip()) # Fixed: Added .replace("Â", "")
 
-        # Availability
+        # -----------------
+        # AVAILABILITY
+        # -----------------
         availability = book.find("p", class_="instock availability").text.strip()
 
-        # Rating
+        # -----------------
+        # RATING (convert to number)
+        # -----------------
         rating_class = book.find("p")["class"]
         rating_text = rating_class[1]
 
         rating_map = {
-            "One": 1, "Two": 2, "Three": 3,
-            "Four": 4, "Five": 5
+            "One": 1,
+            "Two": 2,
+            "Three": 3,
+            "Four": 4,
+            "Five": 5
         }
+
         rating = rating_map.get(rating_text, 0)
 
-        # Product Link
+        # -----------------
+        # PRODUCT LINK
+        # -----------------
         relative_link = book.h3.a["href"]
         product_link = base_url + "catalogue/" + relative_link
 
+        # -----------------
+        # SAVE DATA
+        # -----------------
         data.append({
             "Title": title,
             "Price (£)": price,
@@ -64,9 +89,25 @@ while len(data) < 250:  # 👈 limit rows here
         })
 
     page += 1
+    time.sleep(1)  # polite scraping
 
+# =========================
+# CREATE DATAFRAME
+# =========================
 df = pd.DataFrame(data)
-df.to_csv("books_250_rows.csv", index=False)
 
-print("Total rows scraped:", len(df))
-print(df.head())
+# =========================
+# SAVE FILE
+# =========================
+file_name = "books_dataset.csv"
+df.to_csv(file_name, index=False)
+
+# =========================
+# OUTPUT
+# =========================
+print("✅ Scraping Complete!")
+print("Total Rows:", len(df))
+df.head()
+
+from google.colab import files
+files.download("books_dataset.csv")
