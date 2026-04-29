@@ -33,7 +33,6 @@ The scraped dataset includes the following columns:
 | Title           | Name of the book                  |
 | Price (£)       | Book price in numeric format      |
 | Availability    | Stock status of the book          |
-| Rating          | Rating converted to numeric (1–5) |
 | Product Link    | Direct URL to book page           |
 
 ---
